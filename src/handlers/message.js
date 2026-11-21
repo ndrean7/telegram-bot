@@ -30,8 +30,14 @@ function isGreeting(text) {
   return false;
 }
 
+const GREETING_TEXTS = [
+  `Halo! Gua ${config.botName}. Lagi butuh apa? Cek /menu aja.`,
+  `Halo! Ada gua nih. Mau ngapain? Liat /menu dulu deh.`,
+  `Halo! Santai aja, gua di sini. Coba /menu buat liat yang bisa gua lakuin.`,
+];
+
 function greetingText() {
-  return `Halo! Saya ${config.botName}. Ada yang bisa saya bantu?\nKetik /menu untuk lihat perintah yang tersedia.`;
+  return GREETING_TEXTS[Math.floor(Math.random() * GREETING_TEXTS.length)];
 }
 
 // Logika inti bot — murni (tidak kirim pesan, tidak baca network),
