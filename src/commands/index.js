@@ -2,27 +2,27 @@ import { config } from '../config.js';
 import { formatUptime, nowWIB, todayWIB } from '../utils/time.js';
 
 export const FALLBACK =
-  'Maaf, saya tidak mengerti. Ketik /menu untuk lihat perintah yang tersedia.';
+  'Waduh, gua nggak ngerti maksud lo. Coba /menu deh, di situ ada yang bisa gua lakuin.';
 
 const STARTED_AT = Date.now();
 
 export function menuText() {
   return [
-    'Perintah yang tersedia:',
-    '/menu — lihat daftar perintah',
-    '/info — info bot',
-    '/jam — jam sekarang (WIB)',
-    '/ping — cek bot hidup',
+    'Nih, yang bisa gua lakuin:',
+    '/menu — liat daftar ini lagi',
+    '/info — tentang gua',
+    '/jam — jam berapa sekarang (WIB)',
+    '/ping — ngecek gua masih hidup apa nggak',
     '',
-    'Balas salam (halo, pagi, sore, malam) juga bisa.',
+    'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
   ].join('\n');
 }
 
 export function infoText() {
   return [
-    `${config.botName} — bot Telegram umum.`,
-    'Dibuat dengan Bot API resmi Telegram.',
-    'Perintah: /menu, /info, /jam, /ping.',
+    `Gua ${config.botName}, Bot Telegram biasa aja.`,
+    'Jalan pakai Bot API resmi Telegram.',
+    'Coba /menu, /info, /jam, /ping.',
   ].join('\n');
 }
 
@@ -37,11 +37,11 @@ export function runCommand(name) {
     case 'info':
       return infoText();
     case 'jam':
-      return `Sekarang ${todayWIB()}, pukul ${nowWIB()} WIB.`;
+      return `Sekarang ${todayWIB()}, jam ${nowWIB()} WIB.`;
     case 'ping':
-      return `Pong! Bot hidup, sudah jalan ${formatUptime(STARTED_AT)}.`;
+      return `Pong! Gua masih hidup, udah jalan ${formatUptime(STARTED_AT)}.`;
     case 'start':
-      return `Halo! Saya ${config.botName}. Ketik /menu untuk lihat perintah yang tersedia.`;
+      return `Halo! Gua ${config.botName}. Mau ngapain? Cek /menu dulu deh.`;
     default:
       return null;
   }
