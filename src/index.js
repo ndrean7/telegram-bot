@@ -2,10 +2,19 @@ import { createServer } from 'node:http';
 import { config } from './config.js';
 import { askAI } from './ai.js';
 import { handleUpdate, FALLBACK } from './handlers/message.js';
-import { MARKET_REQUEST } from './commands/index.js';
+import { MARKET_REQUEST, INFO_REQUEST } from './commands/index.js';
 import { buildBriefing } from './market.js';
 import { addSubscriber, loadSubscribers } from './subscribers.js';
-import { nowWIBParts } from './utils/time.js';
+import {
+  loadCheckins,
+  saveCheckins,
+  markDone,
+  remainingItems,
+  parseCallback,
+  checklistText,
+  checklistKeyboard,
+} from './checkins.js';
+import { nowWIBParts, todayWIB } from './utils/time.js';
 
 const API = `https://api.telegram.org/bot${config.token}`;
 
@@ -22,8 +31,42 @@ async function callTelegram(method, body) {
   return data;
 }
 
-async function sendMessage(chatId, text) {
-  await callTelegram('sendMessage', { chat_id: chatId, text });
+async function sendMessage(chatId, text, replyMarkup) {
+  const body = { chat_id: chatId, text };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  await callTelegram('sendMessage', body);
+}
+
+// Tangani tap tombol checklist (/info): tandai selesai, lalu update
+// pesan aslinya (teks + keyboard) supaya tinggal yang belum.
+// Kembalikan true kalau update ini adalah callback query.
+async function handleCallback(update) {
+  const cb = update?.callback_query;
+  if (!cb || cb.from?.is_bot) return false;
+  const key = parseCallback(cb.data);
+  const chatId = cb.message?.chat?.id;
+  const messageId = cb.message?.message_id;
+  if (!key || typeof chatId !== 'number' || typeof messageId !== 'number') {
+    await callTelegram('answerCallbackQuery', { callback_query_id: cb.id });
+    return true;
+  }
+  const { date } = nowWIBParts();
+  const state = loadCheckins();
+  const newly = markDone(state, date, key);
+  if (newly) saveCheckins(state);
+  await callTelegram('answerCallbackQuery', {
+    callback_query_id: cb.id,
+    text: newly ? 'Ditandai selesai ✅' : 'Udah ditandai tadi',
+  });
+  if (!newly) return true;
+  const remaining = remainingItems(state, date);
+  await callTelegram('editMessageText', {
+    chat_id: chatId,
+    message_id: messageId,
+    text: checklistText(state, date, todayWIB()),
+    reply_markup: checklistKeyboard(remaining),
+  });
+  return true;
 }
 
 // Long polling: ambil update baru, balas satu per satu.
@@ -41,6 +84,8 @@ async function pollOnce(offset) {
   let nextOffset = offset;
   for (const update of data.result || []) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
+    // Tap tombol inline keyboard (checklist /info).
+    if (await handleCallback(update)) continue;
     // Daftarkan pengirim pesan teks sebagai penerima briefing harian.
     const msg = update?.message;
     if (
@@ -58,6 +103,18 @@ async function pollOnce(offset) {
     // /market: ganti penanda dengan briefing live (async).
     if (reply.text === MARKET_REQUEST) {
       reply.text = await buildBriefing();
+    }
+    // /info: kirim checklist check-in harian + tombol inline.
+    if (reply.text === INFO_REQUEST) {
+      const { date } = nowWIBParts();
+      const state = loadCheckins();
+      const remaining = remainingItems(state, date);
+      await sendMessage(
+        reply.chatId,
+        checklistText(state, date, todayWIB()),
+        checklistKeyboard(remaining),
+      );
+      continue;
     }
     // Pesan bebas (bukan perintah/salam) dan AI aktif: jawab pakai AI,
     // tapi kalau AI gagal / tidak ada key, tetap pakai fallback.
