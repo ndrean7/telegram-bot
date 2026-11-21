@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleMessage, handleUpdate, FALLBACK } from '../src/handlers/message.js';
+import { INFO_REQUEST } from '../src/commands/index.js';
 
 test('salam dibalas sapaan + tawaran /menu', () => {
   const reply = handleMessage('halo');
@@ -23,8 +24,8 @@ test('.menu gaya lama tetap jalan', () => {
   assert.ok(handleMessage('.menu').includes('/info'));
 });
 
-test('/info menampilkan info bot', () => {
-  assert.ok(handleMessage('/info').includes('Bot Telegram'));
+test('/info menampilkan checklist check-in harian', () => {
+  assert.equal(handleMessage('/info'), INFO_REQUEST);
 });
 
 test('/jam menampilkan WIB', () => {
