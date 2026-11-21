@@ -1,12 +1,16 @@
 // AI gratis (Gemini) buat jawab pertanyaan bebas.
 // Tanpa GEMINI_API_KEY, fungsi ini balikin null dan bot tetap
 // pakai balasan rule-based biasa — jadi tidak crash.
+// Error dicatat di log (tanpa menampilkan key) biar ketahuan kenapa gagal.
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export async function askAI(text) {
   const key = process.env.GEMINI_API_KEY || '';
-  if (!key) return null;
+  if (!key) {
+    console.error('AI nonaktif: GEMINI_API_KEY belum diisi di Variables Railway.');
+    return null;
+  }
   try {
     const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
@@ -26,10 +30,16 @@ export async function askAI(text) {
       }),
     });
     const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('Gemini gagal:', res.status, data?.error?.message || JSON.stringify(data).slice(0, 200));
+      return null;
+    }
     const answer =
       data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '';
+    if (!answer.trim()) console.error('Gemini balas kosong.');
     return answer.trim() || null;
-  } catch {
+  } catch (err) {
+    console.error('Gemini error:', err.message);
     return null;
   }
 }
