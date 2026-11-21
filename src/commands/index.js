@@ -8,27 +8,22 @@ export const FALLBACK =
 // buildBriefing() (async), jadi runCommand tetap sinkron.
 export const MARKET_REQUEST = '[[MARKET]]';
 
+// Penanda perintah /info — index.js mengganti ini dengan checklist
+// check-in harian + inline keyboard (async, baca state).
+export const INFO_REQUEST = '[[INFO]]';
+
 const STARTED_AT = Date.now();
 
 export function menuText() {
   return [
     'Nih, yang bisa gua lakuin:',
     '/menu — liat daftar ini lagi',
-    '/info — tentang gua',
+    '/info — checklist check-in testnet harian',
     '/jam — jam berapa sekarang (WIB)',
     '/ping — ngecek gua masih hidup apa nggak',
     '/market — briefing market harian (forex, crypto, saham)',
     '',
     'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
-  ].join('\n');
-}
-
-export function infoText() {
-  return [
-    `Gua ${config.botName}, Bot Telegram biasa aja.`,
-    'Jalan pakai Bot API resmi Telegram.',
-    'Coba /menu, /info, /jam, /ping, /market.',
-    'Tiap pagi jam 07:00 WIB gua kirim briefing market harian.',
   ].join('\n');
 }
 
@@ -41,7 +36,7 @@ export function runCommand(name) {
     case 'bantuan':
       return menuText();
     case 'info':
-      return infoText();
+      return INFO_REQUEST;
     case 'jam':
       return `Sekarang ${todayWIB()}, jam ${nowWIB()} WIB.`;
     case 'ping':
