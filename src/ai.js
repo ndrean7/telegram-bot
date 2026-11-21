@@ -3,7 +3,7 @@
 // pakai balasan rule-based biasa — jadi tidak crash.
 // Error dicatat di log (tanpa menampilkan key) biar ketahuan kenapa gagal.
 const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
 
 export async function askAI(text) {
   const key = process.env.GEMINI_API_KEY || '';
