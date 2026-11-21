@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { config } from './config.js';
-import { handleUpdate } from './handlers/message.js';
+import { askAI } from './ai.js';
+import { handleUpdate, FALLBACK } from './handlers/message.js';
 
 const API = `https://api.telegram.org/bot${config.token}`;
 
@@ -37,7 +38,14 @@ async function pollOnce(offset) {
   for (const update of data.result || []) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
     const reply = handleUpdate(update);
-    if (reply) await sendMessage(reply.chatId, reply.text);
+    if (!reply) continue;
+    // Pesan bebas (bukan perintah/salam) dan AI aktif: jawab pakai AI,
+    // tapi kalau AI gagal / tidak ada key, tetap pakai fallback.
+    if (reply.text === FALLBACK && update?.message?.text) {
+      const aiReply = await askAI(update.message.text);
+      if (aiReply) reply.text = aiReply;
+    }
+    await sendMessage(reply.chatId, reply.text);
   }
   return nextOffset;
 }
