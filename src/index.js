@@ -2,6 +2,10 @@ import { createServer } from 'node:http';
 import { config } from './config.js';
 import { askAI } from './ai.js';
 import { handleUpdate, FALLBACK } from './handlers/message.js';
+import { MARKET_REQUEST } from './commands/index.js';
+import { buildBriefing } from './market.js';
+import { addSubscriber, loadSubscribers } from './subscribers.js';
+import { nowWIBParts } from './utils/time.js';
 
 const API = `https://api.telegram.org/bot${config.token}`;
 
@@ -37,8 +41,24 @@ async function pollOnce(offset) {
   let nextOffset = offset;
   for (const update of data.result || []) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
+    // Daftarkan pengirim pesan teks sebagai penerima briefing harian.
+    const msg = update?.message;
+    if (
+      msg &&
+      typeof msg.text === 'string' &&
+      !msg.from?.is_bot &&
+      typeof msg.chat?.id === 'number'
+    ) {
+      if (addSubscriber(msg.chat.id)) {
+        console.log(`subscriber baru: ${msg.chat.id}`);
+      }
+    }
     const reply = handleUpdate(update);
     if (!reply) continue;
+    // /market: ganti penanda dengan briefing live (async).
+    if (reply.text === MARKET_REQUEST) {
+      reply.text = await buildBriefing();
+    }
     // Pesan bebas (bukan perintah/salam) dan AI aktif: jawab pakai AI,
     // tapi kalau AI gagal / tidak ada key, tetap pakai fallback.
     if (reply.text === FALLBACK && update?.message?.text) {
@@ -48,6 +68,25 @@ async function pollOnce(offset) {
     await sendMessage(reply.chatId, reply.text);
   }
   return nextOffset;
+}
+
+// Briefing market harian, sekali sehari di jam 07:00 WIB.
+let lastBriefingDate = '';
+async function maybeSendBriefing() {
+  const { date, hour } = nowWIBParts();
+  if (hour !== 7 || lastBriefingDate === date) return;
+  const ids = loadSubscribers();
+  if (ids.length === 0) return;
+  const text = await buildBriefing();
+  for (const id of ids) {
+    try {
+      await sendMessage(id, text);
+      console.log(`briefing harian terkirim ke ${id}`);
+    } catch (err) {
+      console.error(`briefing harian gagal ke ${id}:`, err.message);
+    }
+  }
+  lastBriefingDate = date;
 }
 
 async function main() {
@@ -76,6 +115,16 @@ async function main() {
     process.exit(1);
   }
   console.log(`Bot jalan sebagai @${me.result.username}. Menunggu pesan...`);
+
+  // Scheduler briefing harian: cek tiap 60 detik (+ sekali saat start).
+  setInterval(() => {
+    maybeSendBriefing().catch((err) =>
+      console.error('scheduler briefing error:', err.message),
+    );
+  }, 60_000);
+  maybeSendBriefing().catch((err) =>
+    console.error('scheduler briefing error:', err.message),
+  );
 
   let offset = 0;
   // eslint-disable-next-line no-constant-condition
