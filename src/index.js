@@ -31,10 +31,11 @@ async function callTelegram(method, body) {
   return data;
 }
 
-async function sendMessage(chatId, text, replyMarkup) {
+async function sendMessage(chatId, text, replyMarkup, parseMode) {
   const body = { chat_id: chatId, text };
   if (replyMarkup) body.reply_markup = replyMarkup;
-  await callTelegram('sendMessage', body);
+  if (parseMode) body.parse_mode = parseMode;
+  return callTelegram('sendMessage', body);
 }
 
 // Tangani tap tombol checklist (/info): tandai selesai, lalu update
@@ -93,16 +94,24 @@ async function pollOnce(offset) {
       reply.text = await buildBriefing();
     }
     // /bandar: scan akumulasi lintas bursa (lama kalau belum ada cache).
+    // Scan jalan di background supaya balasan perintah lain tidak ketahan.
     if (reply.text === BANDAR_REQUEST) {
       if (!bandarCached()) {
-        await sendMessage(reply.chatId, '⏳ Lagi scan ~50 koin di beberapa bursa, tunggu ±30 detik...');
+        await sendMessage(reply.chatId, '⏳ Lagi scan ~100 koin di beberapa bursa, tunggu ±1 menit...');
       }
-      try {
-        reply.text = await buildBandar();
-      } catch (err) {
-        console.error('bandar gagal:', err?.message || err);
-        reply.text = 'Data bandar lagi nggak bisa diambil. Coba lagi bentar.';
-      }
+      const chatId = reply.chatId;
+      buildBandar()
+        .catch((err) => {
+          console.error('bandar gagal:', err?.message || err);
+          return 'Data bandar lagi nggak bisa diambil. Coba lagi bentar.';
+        })
+        .then(async (text) => {
+          const r = await sendMessage(chatId, text, undefined, 'HTML');
+          // Kalau Telegram nolak HTML, kirim ulang versi teks polos.
+          if (!r?.ok) await sendMessage(chatId, text.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+        })
+        .catch((err) => console.error('kirim bandar gagal:', err?.message || err));
+      continue;
     }
     // /info: kirim checklist check-in harian + tombol inline.
     if (reply.text === INFO_REQUEST) {

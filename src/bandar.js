@@ -1,4 +1,4 @@
-// /bandar: scan akumulasi "bandar" crypto lintas bursa besar.
+// /bandar: scan akumulasi & distribusi "bandar" crypto lintas bursa besar.
 // Data publik futures gratis tanpa key: Binance, Bybit, OKX, Bitget, Gate.
 // Bursa yang gagal (mis. diblok wilayah 451/403) dilewati, tidak dikarang.
 // Tiap koin dinilai per bursa dari 3 data:
@@ -8,8 +8,8 @@
 // Bukan sinyal beli/jual, cuma data petunjuk.
 import { todayWIB, nowWIB } from './utils/time.js';
 
-export const SCAN_LIMIT = 50;
-export const TOP_SHOW = 10;
+export const SCAN_LIMIT = 100;
+export const TOP_SHOW = 15;
 const CACHE_MS = 5 * 60 * 1000;
 const STABLES = new Set(['USDC', 'USDT', 'FDUSD', 'DAI', 'TUSD', 'USDE', 'USD1', 'PYUSD', 'BUSD']);
 
@@ -227,10 +227,14 @@ export function makeAdapters(fetchFn, scale = 1) {
       );
       if (!Array.isArray(d) || !d.length) return { ls: null, taker: null, oi: null };
       // urut lama -> baru
-      const tks = d.slice(-24).map((x) => num(x.lsr_taker)).filter((x) => x !== null && x > 0);
+      // Taker 24j = total volume beli agresif / total jual agresif (bukan
+      // rata-rata rasio per jam, yang bias kalau ada jam bervolume kecil).
+      const last24 = d.slice(-24);
+      const tBuy = last24.reduce((a, x) => a + (num(x.long_taker_size) || 0), 0);
+      const tSell = last24.reduce((a, x) => a + (num(x.short_taker_size) || 0), 0);
       return {
         ls: num(d.at(-1).top_lsr_size),
-        taker: tks.length ? tks.reduce((a, b) => a + b, 0) / tks.length : null,
+        taker: tSell > 0 ? tBuy / tSell : null,
         oi: d.length > 1 ? pctChange(num(d[0].open_interest), num(d.at(-1).open_interest)) : null,
       };
     },
@@ -297,49 +301,73 @@ export function combineCoin(base, perEx) {
 }
 
 // ---------- format ----------
+// Dikirim pakai parse_mode HTML: tabel di dalam <pre> (font monospace)
+// supaya kolom rata di HP.
 
 const f2 = (x) => (x === null ? '-' : x.toFixed(2));
 const fOi = (x) => (x === null ? '-' : `${x >= 0 ? '+' : ''}${x.toFixed(1)}%`);
-const READ_TEXT = {
-  akum: '🟢 Condong akumulasi',
-  dist: '🔴 Condong distribusi',
-  netral: '⚪ Netral',
-};
+const EX_ORDER = ['Binance', 'Bybit', 'OKX', 'Bitget', 'Gate'];
+const EX_CODE = { Binance: 'N', Bybit: 'Y', OKX: 'O', Bitget: 'B', Gate: 'G' };
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const padR = (t, n) => String(t).padEnd(n);
+const padL = (t, n) => String(t).padStart(n);
+
+// Urut kekuatan: bursa setuju terbanyak, lalu skor rata-rata terkuat.
+export function rankAkum(coins) {
+  return coins
+    .filter((c) => c.reading === 'akum')
+    .sort((a, b) => b.agree.length - a.agree.length || b.score - a.score || (b.taker || 0) - (a.taker || 0));
+}
+export function rankDist(coins) {
+  return coins
+    .filter((c) => c.reading === 'dist')
+    .sort((a, b) => b.against.length - a.against.length || a.score - b.score || (a.taker || 0) - (b.taker || 0));
+}
+
+function table(list, exsOf) {
+  const w = Math.max(4, ...list.map((c) => c.base.length));
+  const rows = [`${padL('#', 2)} ${padR('Koin', w)} ${padR('Bursa', 5)} ${padL('L/S', 4)} ${padL('Tk', 4)} ${padL('OI', 6)}`];
+  list.forEach((c, i) => {
+    const exs = EX_ORDER.filter((e) => exsOf(c).includes(e)).map((e) => EX_CODE[e]).join('');
+    rows.push(
+      `${padL(i + 1, 2)} ${padR(c.base, w)} ${padR(exs, 5)} ${padL(f2(c.ls), 4)} ${padL(f2(c.taker), 4)} ${padL(fOi(c.oi), 6)}`,
+    );
+  });
+  return `<pre>${esc(rows.join('\n'))}</pre>`;
+}
 
 export function formatBandar({ coins, okEx, failEx, dateStr, scanned }) {
-  const lines = [`🐋 Akumulasi Bandar — ${dateStr}`, ''];
-  lines.push(`Bursa: ${okEx.length ? okEx.join(', ') : '-'}`);
-  if (failEx.length) lines.push(`Tidak bisa diakses: ${failEx.join(', ')}`);
-  lines.push(`Discan: ${scanned} koin futures volume terbesar`);
-  lines.push('');
+  const L = [`🐋 <b>Akumulasi &amp; Distribusi Bandar</b>`, esc(dateStr), ''];
+  L.push(`Bursa aktif: ${esc(okEx.length ? okEx.join(', ') : '-')}`);
+  if (failEx.length) L.push(`Tidak bisa diakses: ${esc(failEx.join(', '))}`);
+  L.push(`Discan: ${scanned} koin futures volume terbesar`);
 
   if (!okEx.length) {
-    lines.push('Data tidak tersedia, semua bursa gagal diakses. Coba lagi nanti.');
+    L.push('', 'Data tidak tersedia, semua bursa gagal diakses. Coba lagi nanti.');
   } else {
-    const top = coins
-      .filter((c) => c.reading === 'akum')
-      .sort((a, b) => b.agree.length - a.agree.length || b.score - a.score || (b.taker || 0) - (a.taker || 0))
-      .slice(0, TOP_SHOW);
-    lines.push('🟢 Condong akumulasi:');
-    if (!top.length) lines.push('Belum ada koin yang condong akumulasi.');
-    top.forEach((c, i) => {
-      lines.push(`${i + 1}. ${c.base} — ${c.agree.length}/${c.total} bursa (${c.agree.join('+')})`);
-      lines.push(`   L/S ${f2(c.ls)} · Taker ${f2(c.taker)} · OI ${fOi(c.oi)}`);
-    });
-    lines.push('');
-    lines.push('Majors:');
+    const top = rankAkum(coins).slice(0, TOP_SHOW);
+    const bottom = rankDist(coins).slice(0, TOP_SHOW);
+    L.push('', `🟢 <b>Condong akumulasi</b> (${top.length})`);
+    L.push(top.length ? table(top, (c) => c.agree) : 'Belum ada koin yang condong akumulasi.');
+    L.push('', `🔴 <b>Condong distribusi</b> (${bottom.length})`);
+    L.push(bottom.length ? table(bottom, (c) => c.against) : 'Belum ada koin yang condong distribusi.');
+
+    L.push('', '<b>Majors</b>');
+    const STAT = { akum: 'Akumulasi', dist: 'Distribusi', netral: 'Netral' };
+    const mrows = [`${padR('Koin', 4)} ${padR('Status', 10)} ${padL('L/S', 4)} ${padL('Tk', 4)} ${padL('OI', 6)}`];
     for (const b of ['BTC', 'ETH', 'SOL']) {
       const c = coins.find((x) => x.base === b);
-      if (!c || !c.total) lines.push(`${b}: data tidak tersedia`);
-      else lines.push(`${b} ${READ_TEXT[c.reading]} · L/S ${f2(c.ls)} · Taker ${f2(c.taker)} · OI ${fOi(c.oi)}`);
+      if (!c || !c.total) mrows.push(`${padR(b, 4)} data tidak tersedia`);
+      else mrows.push(`${padR(b, 4)} ${padR(STAT[c.reading], 10)} ${padL(f2(c.ls), 4)} ${padL(f2(c.taker), 4)} ${padL(fOi(c.oi), 6)}`);
     }
+    L.push(`<pre>${esc(mrows.join('\n'))}</pre>`);
   }
-  lines.push('');
-  lines.push('L/S = rasio long/short trader · Taker = beli/jual agresif 24j · OI = open interest 24j');
-  lines.push('Bukan sinyal beli/jual, cuma data petunjuk.');
-  let text = lines.join('\n');
-  if (text.length > 4000) text = `${text.slice(0, 3990)}\n…`;
-  return text;
+  L.push('');
+  L.push('<i>Bursa: O=OKX G=Gate B=Bitget N=Binance Y=Bybit (yang setuju)</i>');
+  L.push('<i>L/S = rasio long/short top trader · Tk = beli/jual agresif 24j · OI = open interest 24j</i>');
+  L.push('<i>Urut: bursa setuju terbanyak, lalu skor terkuat.</i>');
+  L.push('Bukan sinyal beli/jual, cuma data petunjuk.');
+  return L.join('\n');
 }
 
 // ---------- scan ----------
