@@ -1,4 +1,4 @@
-// Briefing market harian: forex, crypto, saham.
+// Daily Market: forex, crypto, saham (on-demand via /market).
 // Data: Yahoo Finance (forex + saham) dan CoinGecko (crypto), gratis tanpa key.
 // Tidak pernah mengarang harga: instrumen yang gagal diambil datanya
 // ditampilkan sebagai "data tidak tersedia".
@@ -174,7 +174,7 @@ export function formatBriefing({ forex, crypto, stocks, gainers, losers, dateStr
       ? list.map((m, i) => `${i + 1}. ${m.symbol} ${fmtPct(m.pct)}`)
       : ['data tidak tersedia'];
   return [
-    `📈 Briefing Market — ${dateStr}`,
+    `📈 Daily Market — ${dateStr}`,
     '',
     '💱 Forex:',
     ...forex.map(instrumentLine),
