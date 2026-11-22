@@ -12,7 +12,7 @@ export const MARKET_REQUEST = '[[MARKET]]';
 // check-in harian + inline keyboard (async, baca state).
 export const INFO_REQUEST = '[[INFO]]';
 
-// Penanda perintah /bandar — index.js mengganti ini dengan hasil
+// Penanda perintah /akumulasi (/distribusi, alias lama /bandar) — index.js mengganti ini dengan hasil
 // scan akumulasi & distribusi lintas bursa (async di background, ~1 menit, cache 5 menit).
 export const BANDAR_REQUEST = '[[BANDAR]]';
 
@@ -26,7 +26,7 @@ export function menuText() {
     '/jam — jam berapa sekarang (WIB)',
     '/ping — ngecek gua masih hidup apa nggak',
     '/market — Market Live (forex, crypto, saham)',
-    '/bandar — Akumulasi & distribusi bandar crypto (scan banyak koin, lintas bursa)',
+    '/akumulasi — Akumulasi & distribusi crypto (scan ~100 koin, lintas bursa; /distribusi juga bisa)',
     '',
     'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
   ].join('\n');
@@ -48,7 +48,9 @@ export function runCommand(name) {
       return `Pong! Gua masih hidup, udah jalan ${formatUptime(STARTED_AT)}.`;
     case 'market':
       return MARKET_REQUEST;
-    case 'bandar':
+    case 'akumulasi':
+    case 'distribusi':
+    case 'bandar': // alias lama, disembunyikan dari menu
       return BANDAR_REQUEST;
     case 'start':
       return `Halo! Gua ${config.botName}. Mau ngapain? Cek /menu dulu deh.`;

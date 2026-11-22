@@ -93,7 +93,7 @@ async function pollOnce(offset) {
     if (reply.text === MARKET_REQUEST) {
       reply.text = await buildBriefing();
     }
-    // /bandar: scan akumulasi lintas bursa (lama kalau belum ada cache).
+    // /akumulasi, /distribusi (alias lama /bandar): scan lintas bursa (lama kalau belum ada cache).
     // Scan jalan di background supaya balasan perintah lain tidak ketahan.
     if (reply.text === BANDAR_REQUEST) {
       if (!bandarCached()) {
@@ -103,7 +103,7 @@ async function pollOnce(offset) {
       buildBandar()
         .catch((err) => {
           console.error('bandar gagal:', err?.message || err);
-          return 'Data bandar lagi nggak bisa diambil. Coba lagi bentar.';
+          return 'Data akumulasi/distribusi lagi nggak bisa diambil. Coba lagi bentar.';
         })
         .then(async (text) => {
           const r = await sendMessage(chatId, text, undefined, 'HTML');

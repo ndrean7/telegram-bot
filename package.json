@@ -1,6 +1,6 @@
 {
   "dependencies": {},
-  "description": "Bot Telegram umum pakai Bot API resmi Telegram (tanpa QR, tanpa nomor). Menjawab salam dan perintah /menu, /info, /jam, /ping, /market \u2014 Market Live forex, crypto, saham \u2014 /bandar scan akumulasi & distribusi bandar crypto lintas bursa \u2014 dan tidak mengarang jawaban untuk pesan lain.",
+  "description": "Bot Telegram umum pakai Bot API resmi Telegram (tanpa QR, tanpa nomor). Menjawab salam dan perintah /menu, /info, /jam, /ping, /market \u2014 Market Live forex, crypto, saham \u2014 /akumulasi (/distribusi) scan akumulasi & distribusi crypto lintas bursa \u2014 dan tidak mengarang jawaban untuk pesan lain.",
   "license": "MIT",
   "main": "src/index.js",
   "name": "telegram-bot",

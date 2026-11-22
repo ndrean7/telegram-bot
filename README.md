@@ -12,7 +12,7 @@ Bot ini menjawab dengan aturan ketat, tidak ngawur:
 - `/jam` → jam sekarang (WIB)
 - `/ping` → `Pong!` + uptime
 - `/market` → Market Live (forex, crypto, saham), on-demand, bukan harian
-- `/bandar` → scan akumulasi & distribusi bandar crypto (top 15 masing-masing): ~100 koin futures volume terbesar, data publik OKX, Bitget, Gate (Binance/Bybit ikut kalau bisa diakses dari server). Bukan sinyal beli/jual.
+- `/akumulasi` (atau `/distribusi`) → scan akumulasi & distribusi crypto (top 15 masing-masing): ~100 koin futures volume terbesar, data publik OKX, Bitget, Gate (Binance/Bybit ikut kalau bisa diakses dari server). Bukan sinyal beli/jual.
 - Pesan lain / perintah tidak dikenal → `Maaf, saya tidak mengerti. Ketik /menu untuk lihat perintah yang tersedia.`
 
 Jawaban pendek, bahasa Indonesia.

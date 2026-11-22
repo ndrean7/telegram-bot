@@ -1,4 +1,4 @@
-// /bandar: scan akumulasi & distribusi "bandar" crypto lintas bursa besar.
+// /akumulasi (/distribusi): scan akumulasi & distribusi crypto lintas bursa besar.
 // Data publik futures gratis tanpa key: Binance, Bybit, OKX, Bitget, Gate.
 // Bursa yang gagal (mis. diblok wilayah 451/403) dilewati, tidak dikarang.
 // Tiap koin dinilai per bursa dari 3 data:
@@ -337,7 +337,7 @@ function table(list, exsOf) {
 }
 
 export function formatBandar({ coins, okEx, failEx, dateStr, scanned }) {
-  const L = [`🐋 <b>Akumulasi &amp; Distribusi Bandar</b>`, esc(dateStr), ''];
+  const L = [`🐋 <b>Akumulasi &amp; Distribusi Crypto</b>`, esc(dateStr), ''];
   L.push(`Bursa aktif: ${esc(okEx.length ? okEx.join(', ') : '-')}`);
   if (failEx.length) L.push(`Tidak bisa diakses: ${esc(failEx.join(', '))}`);
   L.push(`Discan: ${scanned} koin futures volume terbesar`);

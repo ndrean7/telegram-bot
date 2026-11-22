@@ -70,7 +70,7 @@ test('formatBandar: daftar akumulasi, bursa gagal, majors, footer', () => {
     scanned: 2,
     dateStr: 'Minggu, 22 November 2026, jam 17.30 WIB',
   });
-  assert.ok(text.includes('🐋 <b>Akumulasi &amp; Distribusi Bandar</b>\nMinggu, 22 November 2026, jam 17.30 WIB'));
+  assert.ok(text.includes('🐋 <b>Akumulasi &amp; Distribusi Crypto</b>\nMinggu, 22 November 2026, jam 17.30 WIB'));
   assert.ok(text.includes('Tidak bisa diakses: Binance'));
   assert.ok(text.includes(' 1 ABC  OG    1.25 1.15  +4.5%'));
   assert.ok(text.includes('BTC  Netral     1.00 1.00  +0.0%'));
@@ -141,11 +141,14 @@ test('buildBandar: semua bursa gagal -> data tidak tersedia, tanpa angka karanga
 
 // --- wiring ---
 
-test('/bandar dikenali dan masuk menu, /market judulnya Market Live', () => {
+test('/akumulasi & /distribusi dikenali, /bandar alias tersembunyi, /market judulnya Market Live', () => {
+  assert.equal(handleMessage('/akumulasi'), BANDAR_REQUEST);
+  assert.equal(handleMessage('/distribusi'), BANDAR_REQUEST);
   assert.equal(handleMessage('/bandar'), BANDAR_REQUEST);
   assert.equal(handleMessage('/market'), MARKET_REQUEST);
   const menu = handleMessage('/menu');
-  assert.ok(menu.includes('/bandar — Akumulasi & distribusi bandar crypto'));
+  assert.ok(menu.includes('/akumulasi — Akumulasi & distribusi crypto'));
+  assert.ok(!/bandar/i.test(menu));
   assert.ok(menu.includes('/market — Market Live'));
 });
 
