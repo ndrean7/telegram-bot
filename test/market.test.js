@@ -128,6 +128,12 @@ function stubFetch(url) {
     const closes = symbol === 'EURUSD=X' ? falling : rising;
     return Promise.resolve({ ok: true, json: async () => yahooChart(closes) });
   }
+  if (u.includes('simple/price?ids=tether')) {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ tether: { idr: 16654.3, idr_24h_change: 0.12 } }),
+    });
+  }
   if (u.includes('market_chart')) {
     const id = u.split('/coins/')[1].split('/')[0];
     const falling = id === 'ethereum';
@@ -174,6 +180,7 @@ test('buildBriefing dengan fetch palsu: semua section terisi, yang gagal -> data
   assert.ok(text.includes('BTC $60,116 (+2.3%) — 🟢 Bullish'));
   assert.ok(text.includes('ETH $3,200 (-1.2%) — 🔴 Bearish'));
   assert.ok(text.includes('SOL $210.50 (+0.4%) — 🟢 Bullish'));
+  assert.ok(text.includes('USDT/IDR Rp16.654 (+0.1%)'));
   assert.ok(text.includes('1. AAA +12.5%'));
   assert.ok(text.includes('5. EEE +1.0%'));
   assert.ok(text.includes('1. JJJ -15.3%'));
@@ -186,6 +193,7 @@ test('buildBriefing kalau semua API gagal: tetap balas, tanpa ngarang harga', as
   const text = await buildBriefing(failingFetch);
   assert.ok(text.includes('XAUUSD (Emas): data tidak tersedia'));
   assert.ok(text.includes('BTC: data tidak tersedia'));
+  assert.ok(text.includes('USDT/IDR: data tidak tersedia'));
   assert.ok(text.includes('IHSG: data tidak tersedia'));
   assert.ok(text.includes('Top Gainer (24j, top 100 market cap):\ndata tidak tersedia'));
   assert.ok(!text.includes('$60,116'));

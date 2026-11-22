@@ -19,6 +19,8 @@ export const INSTRUMENTS = [
   { key: 'btc', name: 'BTC', symbol: 'bitcoin', kind: 'crypto', section: 'crypto', fmt: 'usd0' },
   { key: 'eth', name: 'ETH', symbol: 'ethereum', kind: 'crypto', section: 'crypto', fmt: 'usd0' },
   { key: 'sol', name: 'SOL', symbol: 'solana', kind: 'crypto', section: 'crypto', fmt: 'usd2' },
+  // Kurs USDT ke Rupiah (CoinGecko, tether/idr). Stablecoin: tanpa label tren.
+  { key: 'usdt', name: 'USDT/IDR', symbol: 'tether', kind: 'usdtidr', section: 'crypto', fmt: 'idr' },
   { key: 'ihsg', name: 'IHSG', symbol: '^JKSE', kind: 'yahoo', section: 'stocks', fmt: 'idx' },
   { key: 'bbca', name: 'BBCA', symbol: 'BBCA.JK', kind: 'yahoo', section: 'stocks', fmt: 'idr' },
   { key: 'bbri', name: 'BBRI', symbol: 'BBRI.JK', kind: 'yahoo', section: 'stocks', fmt: 'idr' },
@@ -115,6 +117,22 @@ async function fetchCryptoMarkets(fetchFn) {
   }
 }
 
+async function fetchUsdtIdr(fetchFn) {
+  try {
+    const res = await fetchFn(
+      'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_24hr_change=true',
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const price = data?.tether?.idr;
+    if (typeof price !== 'number') return null;
+    const change = data.tether.idr_24h_change;
+    return { price, changePct: typeof change === 'number' ? change : 0, label: null };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchCryptoChart(id, fetchFn) {
   try {
     const res = await fetchFn(
@@ -164,6 +182,7 @@ function topMovers(coins) {
 
 function instrumentLine({ inst, data }) {
   if (!data) return `${inst.name}: data tidak tersedia`;
+  if (!data.label) return `${inst.name} ${fmtPrice(data.price, inst.fmt)} (${fmtPct(data.changePct)})`;
   return `${inst.name} ${fmtPrice(data.price, inst.fmt)} (${fmtPct(data.changePct)}) — ${LABEL_TEXT[data.label]}`;
 }
 
@@ -248,12 +267,16 @@ export async function buildBriefing(fetchFn = fetch) {
     },
   );
 
-  const [yahooRows, cryptoRows, top100] = await Promise.all([
+  const usdtInst = INSTRUMENTS.find((i) => i.kind === 'usdtidr');
+  const usdtP = fetchUsdtIdr(fetchFn).then((data) => ({ inst: usdtInst, data }));
+
+  const [yahooRows, cryptoRows, usdtRow, top100] = await Promise.all([
     Promise.all(yahooJobs),
     Promise.all(cryptoJobs),
+    usdtP,
     top100P,
   ]);
-  const rows = [...yahooRows, ...cryptoRows];
+  const rows = [...yahooRows, ...cryptoRows, usdtRow];
   const bySection = (section) =>
     INSTRUMENTS.filter((i) => i.section === section).map(
       (inst) => rows.find((r) => r.inst.key === inst.key),
