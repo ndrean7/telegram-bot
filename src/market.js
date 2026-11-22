@@ -1,8 +1,8 @@
-// Daily Market: forex, crypto, saham (on-demand via /market).
+// Market Live: forex, crypto, saham (on-demand via /market, bukan harian).
 // Data: Yahoo Finance (forex + saham) dan CoinGecko (crypto), gratis tanpa key.
 // Tidak pernah mengarang harga: instrumen yang gagal diambil datanya
 // ditampilkan sebagai "data tidak tersedia".
-import { todayWIB } from './utils/time.js';
+import { todayWIB, nowWIB } from './utils/time.js';
 
 const UA = {
   'User-Agent':
@@ -193,7 +193,7 @@ export function formatBriefing({ forex, crypto, stocks, gainers, losers, dateStr
       ? list.map((m, i) => `${i + 1}. ${m.symbol} ${fmtPct(m.pct)}`)
       : ['data tidak tersedia'];
   return [
-    `📈 Daily Market — ${dateStr}`,
+    `📈 Market Live — ${dateStr}`,
     '',
     '💱 Forex:',
     ...forex.map(instrumentLine),
@@ -289,6 +289,6 @@ export async function buildBriefing(fetchFn = fetch) {
     stocks: bySection('stocks'),
     gainers,
     losers,
-    dateStr: todayWIB(),
+    dateStr: `${todayWIB()}, jam ${nowWIB().slice(0, 5)} WIB`,
   });
 }

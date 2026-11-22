@@ -12,6 +12,10 @@ export const MARKET_REQUEST = '[[MARKET]]';
 // check-in harian + inline keyboard (async, baca state).
 export const INFO_REQUEST = '[[INFO]]';
 
+// Penanda perintah /bandar — index.js mengganti ini dengan hasil
+// scan akumulasi bandar lintas bursa (async, lama ~30 detik, cache 5 menit).
+export const BANDAR_REQUEST = '[[BANDAR]]';
+
 const STARTED_AT = Date.now();
 
 export function menuText() {
@@ -21,7 +25,8 @@ export function menuText() {
     '/info — checklist check-in testnet harian',
     '/jam — jam berapa sekarang (WIB)',
     '/ping — ngecek gua masih hidup apa nggak',
-    '/market — Daily Market (forex, crypto, saham)',
+    '/market — Market Live (forex, crypto, saham)',
+    '/bandar — Akumulasi bandar crypto (scan banyak koin, lintas bursa)',
     '',
     'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
   ].join('\n');
@@ -43,6 +48,8 @@ export function runCommand(name) {
       return `Pong! Gua masih hidup, udah jalan ${formatUptime(STARTED_AT)}.`;
     case 'market':
       return MARKET_REQUEST;
+    case 'bandar':
+      return BANDAR_REQUEST;
     case 'start':
       return `Halo! Gua ${config.botName}. Mau ngapain? Cek /menu dulu deh.`;
     default:

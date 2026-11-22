@@ -1,12 +1,12 @@
 {
   "dependencies": {},
-  "description": "Bot Telegram umum pakai Bot API resmi Telegram (tanpa QR, tanpa nomor). Menjawab salam dan perintah /menu, /info, /jam, /ping, /market \u2014 Daily Market forex, crypto, saham \u2014 dan tidak mengarang jawaban untuk pesan lain.",
+  "description": "Bot Telegram umum pakai Bot API resmi Telegram (tanpa QR, tanpa nomor). Menjawab salam dan perintah /menu, /info, /jam, /ping, /market \u2014 Market Live forex, crypto, saham \u2014 /bandar scan akumulasi bandar crypto lintas bursa \u2014 dan tidak mengarang jawaban untuk pesan lain.",
   "license": "MIT",
   "main": "src/index.js",
   "name": "telegram-bot",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test test/handlers.test.js test/market.test.js test/checkins.test.js"
+    "test": "node --test test/handlers.test.js test/market.test.js test/checkins.test.js test/bandar.test.js"
   },
   "type": "module",
   "version": "1.0.0"

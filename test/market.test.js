@@ -82,7 +82,7 @@ const fakeRows = (label) => ({
 
 test('formatBriefing: ada semua section, label, disclaimer, tanggal', () => {
   const text = formatBriefing(fakeRows('bullish'));
-  assert.ok(text.includes('📈 Daily Market — Sabtu, 22 November 2026'));
+  assert.ok(text.includes('📈 Market Live — Sabtu, 22 November 2026'));
   assert.ok(text.includes('💱 Forex:'));
   assert.ok(text.includes('🪙 Crypto:'));
   assert.ok(text.includes('📊 Saham:'));
@@ -173,7 +173,7 @@ function stubFetch(url) {
 
 test('buildBriefing dengan fetch palsu: semua section terisi, yang gagal -> data tidak tersedia', async () => {
   const text = await buildBriefing(stubFetch);
-  assert.ok(text.includes('📈 Daily Market —'));
+  assert.ok(text.includes('📈 Market Live —'));
   assert.ok(text.includes('XAUUSD (Emas) $102.00 (+1.0%) — 🟢 Bullish'));
   assert.ok(text.includes('EURUSD 98.0000 (-1.0%) — 🔴 Bearish'));
   assert.ok(text.includes('BBCA: data tidak tersedia'));

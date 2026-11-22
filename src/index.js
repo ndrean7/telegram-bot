@@ -2,8 +2,9 @@ import { createServer } from 'node:http';
 import { config } from './config.js';
 import { askAI } from './ai.js';
 import { handleUpdate, FALLBACK } from './handlers/message.js';
-import { MARKET_REQUEST, INFO_REQUEST } from './commands/index.js';
+import { MARKET_REQUEST, INFO_REQUEST, BANDAR_REQUEST } from './commands/index.js';
 import { buildBriefing } from './market.js';
+import { buildBandar, bandarCached } from './bandar.js';
 import {
   loadCheckins,
   saveCheckins,
@@ -90,6 +91,18 @@ async function pollOnce(offset) {
     // /market: ganti penanda dengan briefing live (async).
     if (reply.text === MARKET_REQUEST) {
       reply.text = await buildBriefing();
+    }
+    // /bandar: scan akumulasi lintas bursa (lama kalau belum ada cache).
+    if (reply.text === BANDAR_REQUEST) {
+      if (!bandarCached()) {
+        await sendMessage(reply.chatId, '⏳ Lagi scan ~50 koin di beberapa bursa, tunggu ±30 detik...');
+      }
+      try {
+        reply.text = await buildBandar();
+      } catch (err) {
+        console.error('bandar gagal:', err?.message || err);
+        reply.text = 'Data bandar lagi nggak bisa diambil. Coba lagi bentar.';
+      }
     }
     // /info: kirim checklist check-in harian + tombol inline.
     if (reply.text === INFO_REQUEST) {
