@@ -21,7 +21,7 @@ export function menuText() {
     '/info — checklist check-in testnet harian',
     '/jam — jam berapa sekarang (WIB)',
     '/ping — ngecek gua masih hidup apa nggak',
-    '/market — briefing market harian (forex, crypto, saham)',
+    '/market — briefing market langsung (forex, crypto, saham)',
     '',
     'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
   ].join('\n');
