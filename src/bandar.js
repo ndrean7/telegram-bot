@@ -7,6 +7,7 @@
 //   3. Perubahan open interest (OI) 24 jam
 // Bukan sinyal beli/jual, cuma data petunjuk.
 import { todayWIB, nowWIB } from './utils/time.js';
+import { fetchCmc, matchCmc, fUsd, fPct } from './cmc.js';
 
 export const SCAN_LIMIT = 100;
 export const TOP_SHOW = 15;
@@ -58,10 +59,13 @@ export function makeAdapters(fetchFn, scale = 1) {
       const d = await getJson(fetchFn, 'https://fapi.binance.com/fapi/v1/ticker/24hr');
       if (!Array.isArray(d)) return null;
       const m = new Map();
+      const px = new Map(); // BASE -> harga terakhir (buat cocokkan data CMC)
       for (const t of d) {
         if (!t.symbol?.endsWith('USDT')) continue;
         m.set(t.symbol.slice(0, -4), num(t.quoteVolume) || 0);
+        px.set(t.symbol.slice(0, -4), num(t.lastPrice));
       }
+      m.px = px;
       return m;
     },
     async metrics(base) {
@@ -97,10 +101,13 @@ export function makeAdapters(fetchFn, scale = 1) {
       const list = d?.result?.list;
       if (!Array.isArray(list)) return null;
       const m = new Map();
+      const px = new Map(); // BASE -> harga terakhir (buat cocokkan data CMC)
       for (const t of list) {
         if (!t.symbol?.endsWith('USDT')) continue;
         m.set(t.symbol.slice(0, -4), num(t.turnover24h) || 0);
+        px.set(t.symbol.slice(0, -4), num(t.lastPrice));
       }
+      m.px = px;
       return m;
     },
     async metrics(base) {
@@ -141,11 +148,14 @@ export function makeAdapters(fetchFn, scale = 1) {
         );
       }
       const m = new Map();
+      const px = new Map(); // BASE -> harga terakhir (buat cocokkan data CMC)
       for (const t of d.data) {
         if (!t.instId?.endsWith('-USDT-SWAP')) continue;
         // volCcy24h = volume dalam koin -> kali harga = USD
         m.set(t.instId.split('-')[0], (num(t.volCcy24h) || 0) * (num(t.last) || 0));
+        px.set(t.instId.split('-')[0], num(t.last));
       }
+      m.px = px;
       return m;
     },
     cryptoSet: () => okxCrypto,
@@ -180,10 +190,13 @@ export function makeAdapters(fetchFn, scale = 1) {
       const d = await getJson(fetchFn, 'https://api.bitget.com/api/v2/mix/market/tickers?productType=USDT-FUTURES');
       if (!Array.isArray(d?.data)) return null;
       const m = new Map();
+      const px = new Map(); // BASE -> harga terakhir (buat cocokkan data CMC)
       for (const t of d.data) {
         if (!t.symbol?.endsWith('USDT')) continue;
         m.set(t.symbol.slice(0, -4), num(t.usdtVolume) || 0);
+        px.set(t.symbol.slice(0, -4), num(t.lastPr));
       }
+      m.px = px;
       return m;
     },
     async metrics(base) {
@@ -215,10 +228,13 @@ export function makeAdapters(fetchFn, scale = 1) {
       const d = await getJson(fetchFn, 'https://api.gateio.ws/api/v4/futures/usdt/tickers');
       if (!Array.isArray(d)) return null;
       const m = new Map();
+      const px = new Map(); // BASE -> harga terakhir (buat cocokkan data CMC)
       for (const t of d) {
         if (!t.contract?.endsWith('_USDT')) continue;
         m.set(t.contract.slice(0, -5), num(t.volume_24h_quote) || 0);
+        px.set(t.contract.slice(0, -5), num(t.last));
       }
+      m.px = px;
       return m;
     },
     async metrics(base) {
@@ -336,11 +352,28 @@ function table(list, exsOf) {
   return `<pre>${esc(rows.join('\n'))}</pre>`;
 }
 
-export function formatBandar({ coins, okEx, failEx, dateStr, scanned }) {
+// Tabel CMC untuk koin yang sama (urutan sama dengan tabel di atasnya).
+// Lebar dijaga ~32 karakter supaya rata di HP.
+function cmcTable(list) {
+  const w = Math.max(4, ...list.map((c) => c.base.length));
+  const rows = [`${padR('Koin', w)} ${padL('Rank', 4)} ${padL('MCap', 6)} ${padL('Vol', 6)} ${padL('24j', 6)}`];
+  for (const c of list) {
+    const k = c.cmc;
+    rows.push(
+      k
+        ? `${padR(c.base, w)} ${padL(k.rank ?? '-', 4)} ${padL(fUsd(k.mcap), 6)} ${padL(fUsd(k.vol), 6)} ${padL(fPct(k.ch24), 6)}`
+        : `${padR(c.base, w)} ${padL('-', 4)} ${padL('-', 6)} ${padL('-', 6)} ${padL('-', 6)}`,
+    );
+  }
+  return `<pre>${esc(rows.join('\n'))}</pre>`;
+}
+
+export function formatBandar({ coins, okEx, failEx, dateStr, scanned, cmcOk = false }) {
   const L = [`🐋 <b>Akumulasi &amp; Distribusi Crypto</b>`, esc(dateStr), ''];
   L.push(`Bursa aktif: ${esc(okEx.length ? okEx.join(', ') : '-')}`);
   if (failEx.length) L.push(`Tidak bisa diakses: ${esc(failEx.join(', '))}`);
   L.push(`Discan: ${scanned} koin futures volume terbesar`);
+  if (okEx.length) L.push(cmcOk ? 'Data CMC: OK' : 'Data CMC: tidak bisa diakses (kolom CMC dilewati)');
 
   if (!okEx.length) {
     L.push('', 'Data tidak tersedia, semua bursa gagal diakses. Coba lagi nanti.');
@@ -349,8 +382,10 @@ export function formatBandar({ coins, okEx, failEx, dateStr, scanned }) {
     const bottom = rankDist(coins).slice(0, TOP_SHOW);
     L.push('', `🟢 <b>Condong akumulasi</b> (${top.length})`);
     L.push(top.length ? table(top, (c) => c.agree) : 'Belum ada koin yang condong akumulasi.');
+    if (cmcOk && top.length) L.push(`📊 <i>CoinMarketCap</i>`, cmcTable(top));
     L.push('', `🔴 <b>Condong distribusi</b> (${bottom.length})`);
     L.push(bottom.length ? table(bottom, (c) => c.against) : 'Belum ada koin yang condong distribusi.');
+    if (cmcOk && bottom.length) L.push(`📊 <i>CoinMarketCap</i>`, cmcTable(bottom));
 
     L.push('', '<b>Majors</b>');
     const STAT = { akum: 'Akumulasi', dist: 'Distribusi', netral: 'Netral' };
@@ -365,6 +400,7 @@ export function formatBandar({ coins, okEx, failEx, dateStr, scanned }) {
   L.push('');
   L.push('<i>Bursa: O=OKX G=Gate B=Bitget N=Binance Y=Bybit (yang setuju)</i>');
   L.push('<i>L/S = rasio long/short top trader · Tk = beli/jual agresif 24j · OI = open interest 24j</i>');
+  if (cmcOk) L.push('<i>CMC: Rank · MCap = market cap · Vol = volume 24j · 24j = harga 24j. "-" = tidak cocok/tidak ada di CMC</i>');
   L.push('<i>Urut: bursa setuju terbanyak, lalu skor terkuat.</i>');
   L.push('Bukan sinyal beli/jual, cuma data petunjuk.');
   return L.join('\n');
@@ -385,8 +421,10 @@ async function mapLimit(items, n, fn) {
   return out;
 }
 
-export async function scanBandar(fetchFn = fetch, { scale = 1, limit = SCAN_LIMIT } = {}) {
+export async function scanBandar(fetchFn = fetch, { scale = 1, limit = SCAN_LIMIT, cmc = true, noCache = false } = {}) {
   const adapters = makeAdapters(fetchFn, scale);
+  // CMC diambil paralel (1 request), tidak memperlambat scan.
+  const cmcP = cmc ? fetchCmc(fetchFn, { noCache }).catch(() => null) : Promise.resolve(null);
   const tick = await Promise.all(adapters.map((a) => a.tickers().catch(() => null)));
   const live = adapters.map((a, i) => ({ a, t: tick[i] })).filter((x) => x.t && x.t.size);
   const okEx = live.map((x) => x.a.name);
@@ -424,7 +462,18 @@ export async function scanBandar(fetchFn = fetch, { scale = 1, limit = SCAN_LIMI
   const coins = universe.map((b, i) =>
     combineCoin(b, perExResults.map((r) => ({ ex: r.ex, m: r.res[i] }))),
   );
-  return { coins, okEx, failEx, scanned: universe.length };
+
+  // Tempel data CMC per koin. Harga bursa dipakai buat memastikan koinnya sama.
+  const cmcMap = await cmcP;
+  for (const c of coins) {
+    let price = null;
+    for (const { t } of live) {
+      const p = t.px?.get(c.base);
+      if (p > 0) { price = p; break; }
+    }
+    c.cmc = cmcMap ? matchCmc(cmcMap, c.base, price) : null;
+  }
+  return { coins, okEx, failEx, scanned: universe.length, cmcOk: !!cmcMap };
 }
 
 // Cache 5 menit + gabung request yang barengan.
