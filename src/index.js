@@ -155,6 +155,16 @@ async function main() {
     console.log(`Health check: http://localhost:${config.port}/health`);
   });
 
+  // Render free tier tidur kalau 15 menit tanpa request masuk.
+  // Ping /health publik sendiri tiap 10 menit supaya polling tetap jalan.
+  const publicUrl = process.env.RENDER_EXTERNAL_URL;
+  if (publicUrl) {
+    setInterval(() => {
+      fetch(`${publicUrl}/health`).catch((err) => console.error('Keep-alive gagal:', err.message));
+    }, 10 * 60 * 1000);
+    console.log('Keep-alive aktif tiap 10 menit.');
+  }
+
   // Pastikan token benar sebelum polling.
   const me = await callTelegram('getMe', {});
   if (!me.ok) {
