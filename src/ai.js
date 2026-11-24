@@ -9,6 +9,7 @@ export const AI_BUSY = 'AI-nya lagi sibuk (server Google penuh). Coba tanya lagi
 // Daftar model cadangan diambil sekali dari ListModels (model flash yang bisa
 // generateContent), supaya kalau model utama penuh (503) bisa pindah otomatis.
 let modelCache = null;
+let lastGood = null;
 async function candidateModels(key) {
   if (modelCache) return modelCache;
   let extra = [];
@@ -34,10 +35,12 @@ export async function askAI(text) {
   }
   const prompt = text;
   const models = await candidateModels(key);
+  if (lastGood && models.includes(lastGood)) models.sort((a, b) => (a === lastGood ? -1 : b === lastGood ? 1 : 0));
   let busy = false;
-  for (const model of models) {
+  for (const model of [...models]) {
     const r = await callModel(model, key, prompt);
-    if (r.answer) return r.answer;
+    if (r.answer) { lastGood = model; return r.answer; }
+    if (r.status === 404) { modelCache = modelCache.filter((m) => m !== model); continue; }
     if (r.retryable) busy = true;
     else if (r.status && r.status !== 404) break; // error lain (mis. key salah): jangan coba terus
   }
@@ -47,6 +50,7 @@ export async function askAI(text) {
 async function callModel(model, key, text) {
   try {
     const res = await fetch(`${BASE}/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+      signal: AbortSignal.timeout(9000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
