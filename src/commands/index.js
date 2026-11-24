@@ -26,6 +26,7 @@ export function menuText() {
     '/jam — jam berapa sekarang (WIB)',
     '/ping — ngecek gua masih hidup apa nggak',
     '/market — Market Live (forex, crypto, saham)',
+    '/konversi 457 btc — konversi koin CEX/DEX ke USD, Rp, BTC, ETH',
     '/akumulasi — Akumulasi & distribusi crypto (scan ~100 koin, lintas bursa; /distribusi juga bisa)',
     '',
     'Sapa gua aja juga boleh, halo, pagi, sore, malam, bebas.',
