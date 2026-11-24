@@ -99,7 +99,7 @@ async function pollOnce(offset) {
     // /konversi <jumlah> <koin>: harga CEX/DEX live (async).
     const kText = update?.message?.text;
     const km = typeof kText === 'string' && !update.message.from?.is_bot
-      ? kText.trim().match(/^\/(konversi|convert|kv)(@\w+)?(\s+([\s\S]*))?$/i)
+      ? kText.trim().match(/^\/(konversi|convert|kv|harga|price|p)(@\w+)?(\s+([\s\S]*))?$/i)
       : null;
     if (km) {
       const out = await buildKonversi(km[4] || '').catch(() => ({ text: 'Harga lagi nggak bisa diambil. Coba lagi bentar.' }));
