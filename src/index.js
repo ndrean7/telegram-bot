@@ -15,7 +15,7 @@ import {
   checklistKeyboard,
 } from './checkins.js';
 import { nowWIBParts, todayWIB } from './utils/time.js';
-import { buildKonversi } from './konversi.js';
+import { buildKonversi, plainKonversiArgs } from './konversi.js';
 
 const API = `https://api.telegram.org/bot${config.token}`;
 
@@ -105,6 +105,16 @@ async function pollOnce(offset) {
       const out = await buildKonversi(km[4] || '').catch(() => ({ text: 'Harga lagi nggak bisa diambil. Coba lagi bentar.' }));
       await sendMessage(update.message.chat.id, out.text, out.keyboard);
       continue;
+    }
+    // Chat biasa "1 sol" / "1 sol =": langsung konversi kalau koinnya ada di CEX
+    // (atau alamat kontrak DEX). Kalau bukan koin, lanjut ke balasan biasa.
+    const pk = typeof kText === 'string' && !update.message.from?.is_bot ? plainKonversiArgs(kText) : null;
+    if (pk) {
+      const out = await buildKonversi(pk, fetch, { cexOnly: true }).catch(() => ({ notFound: true }));
+      if (!out.notFound && out.keyboard) {
+        await sendMessage(update.message.chat.id, out.text, out.keyboard);
+        continue;
+      }
     }
     const reply = handleUpdate(update);
     if (!reply) continue;
