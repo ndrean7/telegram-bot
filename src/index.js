@@ -147,7 +147,11 @@ async function pollOnce(offset) {
     // Pesan bebas (bukan perintah/salam) dan AI aktif: jawab pakai AI,
     // tapi kalau AI gagal / tidak ada key, tetap pakai fallback.
     if (reply.text === FALLBACK && update?.message?.text) {
-      const aiReply = await askAI(update.message.text);
+      // Tampilkan "sedang mengetik..." selama AI mikir.
+      const typing = () => callTelegram('sendChatAction', { chat_id: reply.chatId, action: 'typing' }).catch(() => {});
+      typing();
+      const tick = setInterval(typing, 4500);
+      const aiReply = await askAI(update.message.text).finally(() => clearInterval(tick));
       if (aiReply) reply.text = aiReply;
     }
     await sendMessage(reply.chatId, reply.text);
