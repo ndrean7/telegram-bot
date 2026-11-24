@@ -48,3 +48,13 @@ test('falls back to DEX', async () => {
   assert.match(out.text, /DEX uniswap \(base\)/);
   assert.match(out.text, /Likuiditas DEX kecil/);
 });
+
+import { plainKonversiArgs } from '../src/konversi.js';
+test('plain chat konversi', () => {
+  assert.equal(plainKonversiArgs('1 sol ='), '1 sol');
+  assert.equal(plainKonversiArgs('2 sol'), '2 sol');
+  assert.equal(plainKonversiArgs('2,5 eth='), '2,5 eth');
+  assert.equal(plainKonversiArgs('10k pepe'), '10k pepe');
+  assert.equal(plainKonversiArgs('bitcoin itu apasih'), null);
+  assert.equal(plainKonversiArgs('halo'), null);
+});
