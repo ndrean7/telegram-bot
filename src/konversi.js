@@ -111,7 +111,7 @@ export function fmtPrice(n) {
 }
 
 // Kembalikan { text, keyboard } atau { text } kalau gagal.
-export async function buildKonversi(args, fetchFn = fetch) {
+export async function buildKonversi(args, fetchFn = fetch, opts = {}) {
   const parsed = parseKonversi(args);
   if (!parsed) return { text: KONVERSI_USAGE };
   const { amount, coin } = parsed;
@@ -119,12 +119,13 @@ export async function buildKonversi(args, fetchFn = fetch) {
   let info = null;
   let symbol = coin.toUpperCase();
   if (!isContractAddress(coin)) info = await cexPrice(fetchFn, coin);
+  if (!info && opts.cexOnly && !isContractAddress(coin)) return { notFound: true };
   if (!info) {
     const d = await dexPrice(fetchFn, coin);
     if (d) { info = d; symbol = d.symbol.toUpperCase(); }
   }
   if (!info) {
-    return { text: `Koin "${coin}" nggak ketemu di CEX (OKX, Gate, Bitget) maupun DEX. Cek lagi simbol atau alamat kontraknya.` };
+    return { notFound: true, text: `Koin "${coin}" nggak ketemu di CEX (OKX, Gate, Bitget) maupun DEX. Cek lagi simbol atau alamat kontraknya.` };
   }
 
   const [btc, eth, idrData] = await Promise.all([
@@ -161,4 +162,12 @@ export async function buildKonversi(args, fetchFn = fetch) {
   ]);
   rows.push([{ text: 'Delete', callback_data: 'del' }]);
   return { text: lines.join('\n'), keyboard: { inline_keyboard: rows } };
+}
+
+// Chat biasa tanpa slash: "1 sol", "1 sol =", "2,5 eth=", "1000000 pepe".
+// Balikin args kalau formatnya cocok, null kalau bukan.
+export function plainKonversiArgs(text) {
+  const m = (text || '').trim().match(/^([\d][\d.,]*\s*(?:k|m|b|jt)?)\s*([a-z][a-z0-9]{1,14}|0x[a-fA-F0-9]{40})\s*=?\s*$/i);
+  if (!m) return null;
+  return `${m[1].replace(/\s+/g, '')} ${m[2]}`;
 }
