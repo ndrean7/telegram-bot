@@ -8,7 +8,8 @@ test('parse amounts', () => {
   assert.equal(parseKonversi('1.000.000 pepe').amount, 1000000);
   assert.equal(parseKonversi('10k pepe').amount, 10000);
   assert.equal(parseKonversi('btc 2').amount, 2);
-  assert.equal(parseKonversi('btc'), null);
+  assert.deepEqual(parseKonversi('btc'), { amount: 1, coin: 'btc' });
+  assert.equal(parseKonversi('5'), null);
 });
 
 test('contract detection', () => {
