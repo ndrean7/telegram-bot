@@ -36,5 +36,7 @@ export function addSubscriber(chatId, filePath = 'subscribers.json') {
   if (ids.includes(chatId)) return false;
   ids.push(chatId);
   saveSubscribers(ids, filePath);
+  // Dicatat di log host (tidak di GitHub) biar bisa dipasang permanen di env SUBSCRIBERS.
+  if (filePath === 'subscribers.json') console.log(`Subscriber baru: ${chatId} (tambahkan ke env SUBSCRIBERS biar permanen)`);
   return true;
 }
