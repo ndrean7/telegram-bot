@@ -4,8 +4,9 @@
 // Semua API publik gratis tanpa key.
 
 export const KONVERSI_USAGE = [
-  'Format: /konversi <jumlah> <koin>',
+  'Format: /harga <koin> atau /konversi <jumlah> <koin>',
   'Contoh:',
+  '/harga btc',
   '/konversi 457 btc',
   '/konversi 1000000 pepe',
   '/konversi 500 <alamat kontrak> (koin DEX)',
@@ -28,7 +29,12 @@ async function getJson(fetchFn, url) {
 // Parse "457 btc", "1.5 eth", "1,5 eth", "1.000.000 pepe", "10k pepe".
 export function parseKonversi(args) {
   const parts = (args || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return null;
+  if (parts.length === 0) return null;
+  // Cuma nama koin ("/harga btc") -> harga per 1 koin.
+  if (parts.length === 1) {
+    if (/^[\d.,]+[kmb]?$/i.test(parts[0])) return null;
+    return { amount: 1, coin: parts[0] };
+  }
   let [rawAmt, coin] = parts;
   // Boleh dibalik: "/konversi btc 457"
   if (!/\d/.test(rawAmt) && /\d/.test(coin)) [rawAmt, coin] = [coin, rawAmt];
@@ -129,13 +135,17 @@ export async function buildKonversi(args, fetchFn = fetch) {
   const usd = amount * info.price;
   const idrRate = Number(idrData?.tether?.idr);
 
+  const idrOf = (v) => (v * idrRate >= 1 ? fmtNum(v * idrRate, 0) : fmtPrice(v * idrRate));
   const lines = [
-    `💱 ${fmtNum(amount)} ${symbol}`,
-    `Harga: $${fmtPrice(info.price)} (${info.source})`,
-    '',
-    `${usd >= 1 ? fmtNum(usd, 2) : fmtPrice(usd)} USD`,
+    `💰 1 ${symbol} = $${fmtPrice(info.price)}${idrRate > 0 ? ` = Rp${idrOf(info.price)}` : ''}`,
+    `Sumber: ${info.source}`,
   ];
-  if (idrRate > 0) lines.push(`Rp${fmtNum(usd * idrRate, 0)}`);
+  if (amount !== 1) {
+    lines.push('', `💱 ${fmtNum(amount)} ${symbol}:`, `${usd >= 1 ? fmtNum(usd, 2) : fmtPrice(usd)} USD`);
+    if (idrRate > 0) lines.push(`Rp${idrOf(usd)}`);
+  } else {
+    lines.push('');
+  }
   if (btc?.price && symbol !== 'BTC') lines.push(`${fmtPrice(usd / btc.price)} BTC`);
   if (eth?.price && symbol !== 'ETH') lines.push(`${fmtPrice(usd / eth.price)} ETH`);
   if (info.liquidity !== undefined && info.liquidity < 50000) {
