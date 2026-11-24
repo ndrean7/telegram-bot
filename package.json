@@ -6,7 +6,7 @@
   "name": "telegram-bot",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test test/handlers.test.js test/market.test.js test/checkins.test.js test/bandar.test.js test/cmc.test.js"
+    "test": "node --test test/handlers.test.js test/market.test.js test/checkins.test.js test/bandar.test.js test/cmc.test.js test/subscribers.env.test.js"
   },
   "type": "module",
   "version": "1.0.0"
