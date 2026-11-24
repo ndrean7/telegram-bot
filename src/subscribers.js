@@ -31,12 +31,16 @@ export function saveSubscribers(ids, filePath = 'subscribers.json') {
 }
 
 // Kembalikan true kalau chat id ini baru didaftarkan.
+const loggedOnce = new Set();
 export function addSubscriber(chatId, filePath = 'subscribers.json') {
   const ids = loadSubscribers(filePath);
+  if (filePath === 'subscribers.json' && !envSubscribers().includes(chatId) && !loggedOnce.has(chatId)) {
+    loggedOnce.add(chatId);
+    console.log(`Subscriber: ${chatId} (belum ada di env SUBSCRIBERS)`);
+  }
   if (ids.includes(chatId)) return false;
   ids.push(chatId);
   saveSubscribers(ids, filePath);
   // Dicatat di log host (tidak di GitHub) biar bisa dipasang permanen di env SUBSCRIBERS.
-  if (filePath === 'subscribers.json') console.log(`Subscriber baru: ${chatId} (tambahkan ke env SUBSCRIBERS biar permanen)`);
   return true;
 }
