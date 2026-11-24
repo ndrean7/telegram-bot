@@ -15,6 +15,7 @@ import {
   checklistKeyboard,
 } from './checkins.js';
 import { nowWIBParts, todayWIB } from './utils/time.js';
+import { buildKonversi } from './konversi.js';
 
 const API = `https://api.telegram.org/bot${config.token}`;
 
@@ -44,6 +45,14 @@ async function sendMessage(chatId, text, replyMarkup, parseMode) {
 async function handleCallback(update) {
   const cb = update?.callback_query;
   if (!cb || cb.from?.is_bot) return false;
+  // Tombol Delete di hasil /konversi: hapus pesan bot itu.
+  if (cb.data === 'del') {
+    await callTelegram('answerCallbackQuery', { callback_query_id: cb.id });
+    if (cb.message) {
+      await callTelegram('deleteMessage', { chat_id: cb.message.chat.id, message_id: cb.message.message_id });
+    }
+    return true;
+  }
   const key = parseCallback(cb.data);
   const chatId = cb.message?.chat?.id;
   const messageId = cb.message?.message_id;
@@ -87,6 +96,16 @@ async function pollOnce(offset) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
     // Tap tombol inline keyboard (checklist /info).
     if (await handleCallback(update)) continue;
+    // /konversi <jumlah> <koin>: harga CEX/DEX live (async).
+    const kText = update?.message?.text;
+    const km = typeof kText === 'string' && !update.message.from?.is_bot
+      ? kText.trim().match(/^\/(konversi|convert|kv)(@\w+)?(\s+([\s\S]*))?$/i)
+      : null;
+    if (km) {
+      const out = await buildKonversi(km[4] || '').catch(() => ({ text: 'Harga lagi nggak bisa diambil. Coba lagi bentar.' }));
+      await sendMessage(update.message.chat.id, out.text, out.keyboard);
+      continue;
+    }
     const reply = handleUpdate(update);
     if (!reply) continue;
     // /market: ganti penanda dengan briefing live (async).
