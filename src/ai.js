@@ -19,11 +19,14 @@ async function candidateModels(key) {
     extra = (data.models || [])
       .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map((m) => String(m.name || '').replace(/^models\//, ''))
-      .filter((n) => /flash/.test(n) && !/(image|tts|audio|live|embedding|thinking-exp)/.test(n));
+      .filter((n) => /(flash|gemma)/.test(n) && !/(image|tts|audio|live|embedding|thinking-exp|preview)/.test(n));
   } catch {
     extra = [];
   }
-  modelCache = [...new Set([PRIMARY, ...extra])].slice(0, 5);
+  const flash = extra.filter((n) => /flash/.test(n) && !/2\.0|1\.5/.test(n)).slice(0, 4);
+  // Gemma: kuota terpisah dari Gemini, jadi cadangan terakhir kalau Gemini penuh.
+  const gemma = extra.filter((n) => /^gemma-\d.*(27b|12b)/.test(n)).slice(0, 2);
+  modelCache = [...new Set([PRIMARY, ...flash, ...gemma])];
   return modelCache;
 }
 
